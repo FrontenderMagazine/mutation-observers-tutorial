@@ -1,32 +1,56 @@
-# Getting to know mutation observers
+# Познакомимся с наблюдателями за изменениями
 
-As you develop more complex JavaScript-heavy applications or roll-your-own framework, you may find that you need to know when the DOM node tree has changed. You may want to know when a view has been loaded or unloaded. Or perhaps you are profiling an application, and want to measure how many nodes are affected by a DOM operation.
+По мере того, как вы разрабатываете более сложные и насыщенные JavaScript приложения
+ — или свой собственный фреймворк — вы, скорее всего, сталкиваетесь с ситуацией,
+ когда вам нужно знать, когда дерево DOM изменилось. Еще, может быть, вам хорошо
+ было бы узнать, когда какой-либо вид загрузился или скрылся с экрана. Или,
+ может быть, вы отлаживаете производительность приложения и хотиет измерить,
+ сколько элементов в итоге меняются из-за DOM-операции.
 
-We used to do this with mutation events. Introduced by the DOM, Level 2 specification, the MutationEvent interface defined several events — such as `DOMNodeInserted` and `DOMAttrModified` — that would be fired by the browser when a node was added, removed, or deleted. Mutation events, however, are not without their problems.
+Раньше мы делали это с помощью событий изменения. В спецификации DOM Level 2
+интерфейс MutationEvent определял несколько событий: например, `DOMNodeInserted`
+и `DOMAttrModified` — они вызываются браузером, когда был добавлен, изменен или
+удален элемент. Однако в событиях об изменении DOM есть свои проблемы.
 
-## The problem with MutationEvents
+## Проблема с MutationEvents
 
-Though an excellent idea in theory, in practice, mutation events had two major hurdles.
+Хотя в теории это замечательная идея, на практике у событий изменения есть две
+большие проблемы.
 
-  1. **MutationEvents are synchronous.** Events are fired when called, and may prevent other events in the queue from being fired. Add or remove enough nodes, and the application could lag or hang.
-  2. **Because they were events, they were implemented as events.** I know that reads like circular logic, but stick with me. Events must propagate through the DOM via capturing and sometimes bubbling. Capturing and bubbling can, in turn, trigger other event listeners that modify the DOM. And those can, in turn, cause more MutationEvents to fire, clogging the JavaScript thread — or worse, crashing the browser.
+  1. **`MutationEvent` вызывается синхронно.** События срабатывают тогда, когда
+  они вызваны, и другие события в очереди могут из-за этого задержаться. Добавьте
+  или удалите из документа достаточное количество элементов, и приложение начнет
+  тормозить или зависнет.
+  2. **`MutationEvent` — события, и поэтому были реализованы как события.** Я
+  понимаю, что это звучит слишком очевидно, но подождите секунду. События проходят
+  через DOM — они захватываются или всплывают. Оба этих процесса могут, в свою
+  очередь, заставлять срабатывать другие обработчики событий, которые менют DOM.
+  И, соответственно, те заставят сработать еще большее количество MutationEvents,
+  отчего поток для исполнения JavaScript будет забит — а в худшем случае браузер рухнет.
 
-Sounds messy, right?
+Звучит жутко, не правда ли?
 
-Indeed, mutation events are messy enough to have been deprecated in the [DOM, Level 3 specification][1]. But if mutation events are deprecated, we need something to replace them. That's where mutation observers come in.
+Действительно, с событиями изменения столько проблем, что они были помечены как
+устаревшие в [спецификации DOM Level 3][1]. Но если события изменения устарели,
+нам нужно что-то, что могло бы их заменить. Вот здесь и появляются наблюдатели
+за изменениями (Mutation Observers).
 
-##  How Mutation Observers are different
+##  Чем отличаются наблюдатели за изменениями?
 
-Mutation observers are defined by the [DOM Standard][2], and differ from mutation events one key way: they are asynchronous. They do not fire every time an event occurs. Instead they:
+Наблюдатели за изменениям определяются [стандартом DOM][2], и отличаются от
+событий изменения следующим ключевым образом: они являются асинхронными. Они не
+срабатывают каждый раз, как случается событие. Вместо этого они:
 
-  * wait until other scripts or tasks complete;
-  * report changes in a batch as an array of mutation records, rather than one-by-one; and
-  * can observe all changes to a node, or only observe specific kinds of changes.
+  * ждут, пока отрабатывают другие скрипты и задачи;
+  * передают изменения не по одному, а блоками, в массиве записей изменений;
+  * могут следить за всеми изменениями элемента, — или только за определенными типами изменений.
 
-What's more, because they _are not_ events, they don't come with the implementation overhead of events. They're less likely to freeze the UI or cause a browser crash as a result.
+Более того, поскольку _это не события_, у наблюдателей нет высокой стоимости
+имплементации, которая есть у событий. Наблюдателям гораздо сложнее подвесить
+интерфейс или обрушить браузер.
 
-Let's consider an example. In the code below, we're appending 2500 paragraphs to a document fragment, and then adding that fragment as a child of an article element.
-
+Давайте посмотрим пример. В коде ниже мы прибавляем к фрагменту документа 2500
+абзацев, а потом добавляем этот фрагмент в качестве дочернего к элементу `article`.
 
     var docFrag  = document.createDocumentFragment(),
         thismany = 2500,
@@ -35,8 +59,8 @@ Let's consider an example. In the code below, we're appending 2500 paragraphs to
         p;
 
     while ( i &lt; thismany) {
-        // Creates a new p element if one doesn't exists.
-        // Clones the existing element if it does.
+        // Создает новый элемент p, если он существует.
+        // Если таковой существует, то клонируем существующий элемент.
         p = (p === undefined) ? document.createElement('p') : p.cloneNode(false);
         docFrag.appendChild(p);
         i%2B%2B;
@@ -45,36 +69,50 @@ Let's consider an example. In the code below, we're appending 2500 paragraphs to
     a.appendChild( docFrag );
 
 
-_Figure 1: Adding 2500 paragraph nodes to a document using a document fragment._
+_Листинг 1: Добавление 2500 абзацев к документу через фрагмент документа._
 
-Even though we're adding 2500 paragraphs nodes, we've batched them into one DOM update by using a document fragment. Still, this bit of code generates 2500 `DOMNodeInserted` events, one for each paragraph. Our [DOMNodeInserted event handler][3] is invoked 2500 times. With a mutation observer, on the other hand, our callback is [invoked once][4]. One mutation observer can record multiple DOM operations.
+Да, мы добавили 2500 абзацев, но мы сгруппировали их в одно обновление DOM,
+используя фрагмент документа. И все же этот код генерирует 2500 событий
+`DOMNodeInserted` — по одному на каждый абзац. Наш [обработчик события DOMNodeInserted][3]
+вызывается 2500 раз. С другой стороны, если использовать наблюдатель за изменениями,
+наш колбэк вызовется [только один раз][4]. Один наблюдатель за изменениями может
+записывать несколько DOM-операций.
 
-##  Okay, but can I use them now?
+## Окей, а сейчас их можно использовать?
 
-Support for isn't available everywhere just yet. Opera 15%2B, Firefox 14%2B and Chrome 26%2B support the `MutationObserver` interface. Internet Explorer 11 will also have support when it's released, as will Safari 6.1. Safari 6.0 and Chrome versions 18 through 25 also support `MutationObserver`, but with a WebKit prefix (`WebKitMutationObserver`). You can detect support with the code [shown below][5].
-
+Поддержка доступна пока не везде. Интерфейс `MutationObserver` поддерживается в
+Opera 15+, Firefox 14+ и Chrome 26+. Его также будет поддерживать Internet Explorer
+11 и Safari 6.1. Safari 6.0 и Chrome 18—25 также поддерживают `MutationObserver`,
+но с WebKit-префиксом (`WebKitMutationObserver`). Определить, поддерживается ли
+наблюдение за изменениями, можно с помощью [следующего кода][5].
 
     var canObserveMutation = 'MutationObserver' in window;
 
-_Figure 2: Detecting mutation observer support._
+_Листинг 2: Определяем, поддерживается ли браузером наблюдение за изменениями._
 
-##  So how do I use 'MutationObserver'?
+## Так, как же мне использовать `MutationObserver`?
 
-The good news is that mutation observers are easy to use. First create an observer object using the MutationObserver constructor as shown in [Figure 3][6]. The constructor requires a single parameter, a callback function.
-
+Хорошие новости! Наблюдатели за изменениями очень легки в использовании. Сперва
+вы создаете объект-наблюдатель с помощью конструктора `MutationObserver`, как в
+[листинге 3][6]. В конструкторе вы указываете единственный параметр — функцию-колбэк.
 
     var observer, callback;
     callback = function( recordqueue ){
-        // do something to each record in the recordqueue array.
+        // сделать что-то с каждой записью в массиве recordqueue.
     }
     observer = new MutationObserver( callback );
 
-_Figure 3: Creating a mutation observer._
+_Листинг 3: Создаем наблюдатель за изменениями._
 
-Our callback function will receive an array of `MutationRecord` objects as an argument. Each `MutationRecord` object summarizes a change to the node tree. We'll discuss [mutation records][7] in more detail later.
+Наша колбэк-функция получит в качестве аргумента массив объектов `MutationRecord`.
+Каждый объект `MutationRecord` описывает изменение в дереве элементов. Мы обсудим
+[записи изменений][7] подробнее позже.
 
-Next, you'll need to define a node to observe, and determine what kinds of DOM changes you'd like to keep an eye on. For this, we use the `observe` method. Its first parameter must be a node, and its second must be a [dictionary][8] of options ([Figure 4][9]). In the example below, we'll watch an article element for changes to its children or attributes.
-
+Далее вам нужно будет определить, за каким элементом вы будете следить и какие
+типы изменений в DOM вам интересны. Для этого мы используем метод `observe`.
+Его первый параметр — элемент, а второй — [словарь][8] опций ([листинг 4][9]).
+В примере ниже мы будем наблюдать за изменениями дочерних элементов или атрибутов
+элемента `article`.
 
     var  options = {
         'childList': true,
@@ -84,152 +122,184 @@ Next, you'll need to define a node to observe, and determine what kinds of DOM c
 
     observer.observe( article, options );
 
-_Figure 4: Determining which node and mutation types to track_
+_Листинг 4: Решаем, какой элемент и тип изменения мы будем отслеживать_
 
-The options parameter may include the following properties and values.
+Параметр `options` может включать следующие свойства и значения:
 
 `childList`
-    true or false; observe mutations to the target node's children.
+    булево значение; наблюдать ли за изменениями за дочерними элементами этого элемента
 `attributes`
-    true or false; observe changes to the attributes of a target node.
+    булево значение; наблюдать ли за изменениями в атрибутах этого элемента
 `characterData`
-    true or false; Observe changes to the data or text content of the target node.
+    булево значение; наблюдать ли за изменениями данных или текстового содержания
+    этого элемента
 `subtree`
-    true or false; observe mutations to all descendants of the target, including child nodes and "grandchild nodes" (or the child nodes of child nodes).
+    булево значение; наблюдать ли за изменениями за всеми вложенными элементами
+    этого элемента, включая дочерние элементы, их дочерние элементы и т.п.
 `attributeOldValue`
-    true or false; if the attributes property is true, and you'd like to capture the value of the attribute before the mutation is recorded.
+    булево значение; если включено `attributes`, хотите ли вы захватить значение
+    атрибута перед тем, как изменение будет записано.
 `characterDataOldValue`
-    true or false; if the characterData property is true, and you'd like to capture the value of the data before the mutation is recorded.
+    булево значение; если включено `characterData`, хотите ли вы захватить значение
+    данных перед тем, как изменение будет записано.
 `attributeFilter`
-    a list of attributes to observe, enclosed in square brackets (example: `['class','src']`);
+    список атрибутов, за которыми нужно наблюдать, в квадратных скобках (пример: `['class','src']`);
 
-Either the `childList`, `attributes`, or `characterData` property _must_ be included, and set to `true` in order to observe a mutation.
+Для того, чтобы следить за изменением, _необходимо_ включить значения `childList`,
+`attributes` или `characterData`, и хотя бы одному из них должно быть присвоено
+значение `true`.
 
-To stop observing mutations, use the `disconnect()` method (`observer.disconnect()`). Using this method prevents further invocation of the callback function. The `takeRecord` method (`observer.takeRecord()`) clears the record queue. To resume watching mutations, just re-invoke the `observe` method.
+Для того, чтобы перестать следить за изменениями, используйте метод `disconnect()`
+(`observer.disconnect()`). После использования этого метода функция-колбэк больше
+не будет вызываться. Метод `takeRecord` (`observer.takeRecord()`) очищает очередь
+записей. Для того, чтобы продолжить следить за изменениями, просто снова вызовите
+метод `observe`.
 
-I mentioned above that the mutation callback receives an array of mutation records as an argument. Let's take a look at what a mutation record is.
+Я упомянул, что колбэк об изменении получает массив записей изменений в качестве
+аргумента. Давайте посмотрим на то, что такое запись изменений.
 
-## Mutation records
+## Записи изменений
 
-A mutation record is an object that reports a single change to the document tree. Mutation record objects are defined by the `MutationRecord` interface, and contain the following items.
+Запись изменений — объект, который содержит информацию об одном изменении в дереве
+документа. Объекты записи изменений соответствуют интерфейсу `MutationRecord` и
+содержат следующие объекты.
 
 `type`
-    the type of of mutation observed, either `attribute`, `characterData` or `childList`.
+    тип изменения: `attribute`, `characterData` или `childList`.
 `target`
-    the node affected by the mutation.
+    элемент, в котором произошло изменение.
 `addedNodes`
-    a NodeList of elements, attributes, and text nodes added to the tree.
+    список (NodeList) элементов, атрибутов и текстовых узлов, добавленных к дереву.
 `removedNodes`
-    a NodeList of elements, attributes, and text nodes removed from the tree.
+    список (NodeList) элементов, атрибутов и текстовых узлов, удаленных из дерева.
 `previousSibling`
-    returns the previous sibling node, or null if there is no previous sibling.
+    возвращает предыдущий одноуровневый элемент или `null`, если такового нет.
 `nextSibling`
-    returns the next sibling node, or null if there is no next sibling.
+    возвращает следующий одноуровневый элемент или `null`, если такового нет.
 `attributeName`
-    The name of the attribute or attributes changed. If `attributeFilter` option was set, it will only return the filtered node.
+    имя измененного атрибута или атрибутов. Если установлена опция `attributeFilter`,
+    то вернутся только отфильтрованные атрибуты.
 `oldValue`
-    the pre-mutation value in the case of attribute or `characterData` mutations, and `null` for `childList` mutations.
+    значение до изменения в случае изменения атрибута или `characterData`; `null`
+    для изменения типа `childList`.
 
-Now that we've covered the syntax of mutation observers and mutation records, let's look at some examples.
+Теперь, когда мы рассмотрели синтаксис наблюдателей за изменениями и записей
+изменений, давайте посмотрим на примеры.
 
-## Observing the addition or removal of child nodes
+## Наблюдение за добавлением и удалением дочерних элементов
 
-Observing the addition or removal of child nodes is pretty straightforward. We'll create a new object and pass a callback. We'll also observe our document's body, and all changes to its children. [Figure 5][10] shows how.
-
+Наблюдать за добавлением и удалением дочерних элементов довольно просто. Мы
+создаем новый объект и передаем ему колбэк. Следить мы будем за `body` и
+изменениями во всех его дочерних элементах. Пример в [листинге 5][10].
 
     var callback = function(allmutations){
-
-        // Since allmutations is an array, we can use JavaScript Array methods.
+        // allmutations — массив, и мы можем использовать соответствующие методы JavaScript.
         allmutations.map( functions(mr){
-            var mt = 'Mutation type: ' %2B mr.type;  // log the type of mutation
-            mt %2B= 'Mutation target: ' %2B mr.target; // log the node affected.
+            var mt = 'Тип изменения: ' + mr.type;  // записываем тип изменения
+            mt += 'Измененный элемент: ' + mr.target; // записываем измененный элемент.
             console.log( mt );
         });
 
     },
     mo = new MutationObserver(callback),
     options = {
-        // required, and observes additions or deletion of child nodes.
+        // обязательный параметр: наблюдаем за добавлением и удалением дочерних элементов.
         'childList': true,
-        // observes the addition or deletion of "grandchild" nodes.
+        // наблюдаем за добавлением и удалением дочерних элементов любого уровня вложенности.
         'subtree': true
     }
     mo.observe(document.body, options);
 
-_Figure 5: How to observe the addition or removal of child nodes to a document._
+_Листинг 5: Наблюдаем за добавлением и удалением дочерних элементов в документе._
 
-Notice that we've included the `subtree` option, and set it to `true`. Doing so captures when [children are appended][11] to the document body (example: `document.body.appendChild(el)`), _and_ when they are appended to a child of the body (`document.getElementById('my_element').appendChild(el)`). If, instead, `subtree` was `false` or missing, the observer would only keep track of elements appended to the body.
+Обратите внимание, что мы включили опцию `subtree` и установили ее как `true`.
+Это значит, что наблюдатель будет получить информацию о том, когда к телу
+документа [добавляются дочерние элементы][11] (например: `document.body.appendChild(el)`),
+_а также_ когда они прибавляются к дочернему элементу документа
+(`document.getElementById('my_element').appendChild(el)`). Если бы параметр
+`subtree` был установлен в `false` или не был бы указан, то наблюдатель следил
+бы только за элементами, добавляемыми непосредственно к телу документа.
 
-It's also possible to observe mutations to [document fragments][12]. Just pass the fragment as the first parameter to the `observe` method.
+Можно также наблюдать за изменениям в [фрагментах документа][12]. Просто передайте
+фрагмент как первый параметр методу `observe`.
 
-## Observing changes to attributes
+## Наблюдаем за изменениями атрибутов
 
-Observing changes to attributes works much the same way. The main difference is that you must add `'attributes': true` to the options dictionary. If you also want to record the previous attribute value, set the `attributeOldValue` option to `true` ([view a demo][13]).
+Наблюдение за изменениями атрибутов работает во многом так же. Главная разница в
+том, что к словарю опций вам нужно добавить `'attributes': true`. Если вы хотите
+записывать предыдущее значение атрибута, то установите в `true` значение
+`attributeOldValue`([посмотреть демо][13]).
 
 
     var callback = function(allmutations){
-        // Since allmutations is an array, we can use array functions.
+        // allmutations — массив, и мы можем использовать соответствующие методы JavaScript.
         allmutations.map( functions(mr){
-            // log the previous value of the attribute.
-            var attr = 'Previous attribute value: ' %2B mr.oldValue;
+            // записываем предыдущее значение атрибута.
+            var attr = 'Предыдущее значение атрибута: ' + mr.oldValue;
             console.log(attr);
         });
     },
     element = document.getElementById('my_el'),
     mo = new MutationObserver(callback),
     options = {
-        'attributes': true,        // required
-        'attributeOldValue': true  // captures the previous attribute value.
+        'attributes': true,        // обязательно
+        'attributeOldValue': true  // перехватываем предыдущее значение атрибута.
     }
 
     mo.observe(element, options);
 
-_Figure 6: How to observe the changes attribute values._
+_Листинг 6: Наблюдаем за изменениями значений атрибутов._
 
-The example above will capture all changes to any attribute of our target element, including deletions. As you can see [in the demo][13], each time the value of an attribute changes, a new mutation record gets added to the queue. But what if we only wanted to observe changes to _particular_ attributes?
+Пример выше будет перехватывать все изменения любого атрибута нашего элемента,
+включая и удаления. Как можно видеть [в демо][13], каждый раз, когда меняется
+значение атрибута, к очереди добавляется новая запись изменения. Но что если
+мы хотим наблюдать изменения только _определенных_ атрибутов?
 
-### Filtering which attributes are observed
+### Фильтруем атрибуты, за которыми мы наблюдаем
 
-We can limit the which attributes we'd like to observe by adding the `attributeFilter` property to our options ([Figure 7][14]). The value of `attributeFilter` must be a comma-separated list of attributes to track, enclosed in square brackets (`[` and `]`).
-
+Мы можем ограничить набор атрибутов, за которыми мы хотим наблюдать, добавив к
+нашим опциям свойство `attributeFilter` ([листинг 7][14]). Значение
+`attributeFilter` должно быть разделенным запятой списком атрибутов, за которыми
+мы будем наблюдать (каждый атрибут должен быть в квадратных скобках).
 
     var options = {
         'attributes': true,
         'attributeOldValue': true,
-        'attributeFilter': ['class'] // only captures changes to the class attribute
+        'attributeFilter': ['class'] // наблюдаем только за изменениями атрибута class
     }
 
     mo.observe(element, options);
 
-_Figure 7: Filtering which attributes we observe._
+_Листинг 7: Фильтруем атрибуты, за которыми мы наблюдаем._
 
-Setting that property means that a mutation record wil be generated _only_ for changes to the value of the class attribute ([view a demo][15]).
+Установка этого свойства означает, что запись изменения будет сгенерирована
+_только_ для изменений значения атрибута `class` ([посмотреть демо][15]).
 
-## Learn More
+## Дополнительная информация
 
-To learn more about mutation observers, try the following resources.
+Чтобы узнать больше о наблюдателях за изменениями, обратите внимание на следующие
+ресурсы:
 
-* [Mutation observers from the WHATWG][16]
-* [Mutation Observers vs Mutation Events][17] from the Mutation Summary project.
-* [MutationReplacement][18], from the W3C WebApps wiki, which offers historical and technical context
+* [Наблюдатели за изменениям на сайте WHATWG][16]
+* [Наблюдатели за изменениями против событий изменения][17] — страница проекта Mutation Summary.
+* [MutationReplacement][18], из вики W3C WebApps, — подробнее об историческом и техническом контексте.
 
 
    [1]: http://www.w3.org/TR/DOM-Level-3-Events/#events-mutationevents
    [2]: http://dom.spec.whatwg.org/#mutation-observers
    [3]: http://dev.opera.com/mutationobserver-mutationevent.html
    [4]: http://dev.opera.com/mutationobserver-mutationobserver.html
-   [5]: http://dev.opera.com#detectMutationObserverSupport
-   [6]: http://dev.opera.com#MutationObserver
-   [7]: http://dev.opera.com#mutationrecords
+   [5]: #detectMutationObserverSupport
+   [6]: #MutationObserver
+   [7]: #mutationrecords
    [8]: http://dev.w3.org/2006/webapi/WebIDL/#dfn-dictionary
-   [9]: http://dev.opera.com#usingobservefunction
-   [10]: http://dev.opera.com#watchchildnodes
+   [9]: #usingobservefunction
+   [10]: #watchchildnodes
    [11]: http://dev.opera.com/mutationobserver-addchildren.html
    [12]: http://dev.opera.com/mutationobserver-docfrag.html
    [13]: http://dev.opera.com/mutationobserver-attributes.html
-   [14]: http://dev.opera.com#filteringattributes
+   [14]: #filteringattributes
    [15]: http://dev.opera.com/mutationobserver-attributes-filtered.html
    [16]: http://dom.spec.whatwg.org/#mutation-observers
    [17]: http://code.google.com/p/mutation-summary/wiki/DOMMutationObservers
    [18]: http://www.w3.org/2008/webapps/wiki/MutationReplacement
-
