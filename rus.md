@@ -59,7 +59,7 @@
         a = document.querySelector('article'),
         p;
 
-    while ( i &lt; thismany) {
+    while ( i < thismany) {
         // Создает новый элемент p, если он существует.
         // Если таковой существует, то клонируем существующий элемент.
         p = (p === undefined) ? document.createElement('p') : p.cloneNode(false);
