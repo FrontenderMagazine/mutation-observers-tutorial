@@ -24,6 +24,7 @@
 <script>
 document.getElementById("back-link").addEventListener('click',function(event){
   event.preventDefault();
+  console.log(history.length);
   history.go(-1);
 },false);
 (function(d){
