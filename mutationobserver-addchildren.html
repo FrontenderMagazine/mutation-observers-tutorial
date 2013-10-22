@@ -8,7 +8,7 @@
 <body>
 <header>
   <h1>Отслеживаем добавление дочерних узлов</h1>
-  <nav><a href="/mutation-observers-tutorial/">Вернуться к статье</a></nav>
+  <nav><a id="back-link" href="/mutation-observers-tutorial/">Вернуться к статье</a></nav>
 </header>
 
 <article>
@@ -20,6 +20,11 @@
 <div id="demo"></div>
 
 <script>
+document.getElementById("back-link").addEventListener('click',function(event){
+  event.preventDefault();
+  history.go(-1);
+},false);
+
 (function(d){
   var btn = d.querySelector('button'),
   demo = d.getElementById('demo'),

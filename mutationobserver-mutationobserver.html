@@ -8,7 +8,7 @@
 <body>
 <header>
   <h1>Почему наблюдатель за изменениями DOM лучше событий изменения DOM</h1>
-  <nav><a href="/mutation-observers-tutorial/">Вернуться к статье</a></nav>
+  <nav><a id="back-link" href="/mutation-observers-tutorial/">Вернуться к статье</a></nav>
 </header>
 
 <article>
@@ -22,6 +22,10 @@
 
 <script src="modemo.js"></script>
 <script>
+document.getElementById("back-link").addEventListener('click',function(event){
+  event.preventDefault();
+  history.go(-1);
+},false);
 (function(d){
   eventcount = 0;
   var mocallback = function(mr){

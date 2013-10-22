@@ -8,7 +8,7 @@
 <body>
 <header>
   <h1>Наблюдение за добавлением узлов в фрагмент документа.</h1>
-  <nav><a href="/mutation-observers-tutorial/">Вернуться к статье</a></nav>
+  <nav><a id="back-link" href="/mutation-observers-tutorial/">Вернуться к статье</a></nav>
 </header>
 
 <article>
@@ -25,6 +25,10 @@
 <div id="demo"></div>
 
 <script>
+document.getElementById("back-link").addEventListener('click',function(event){
+  event.preventDefault();
+  history.go(-1);
+},false);
 (function(d){
   var thismany = 1000,
   btn = d.querySelectorAll('button'),
