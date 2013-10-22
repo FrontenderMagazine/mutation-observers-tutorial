@@ -2,12 +2,12 @@
 <html lang="ru-RU">
 <head>
   <meta charset="utf-8" />
-  <title>Почему наблюдатель за изменениями DOM лучше событий изменения DOM</title>
+  <title>Почему наблюдатели лучше событий</title>
   <link rel="stylesheet" href="mutationobserver.css">
 </head>
 <body>
 <header>
-  <h1>Почему наблюдатель за изменениями DOM лучше событий изменения DOM</h1>
+  <h1>Почему наблюдатели лучше событий</h1>
   <nav><a id="back-link" href="/mutation-observers-tutorial/">Вернуться к статье</a></nav>
 </header>
 
@@ -23,7 +23,21 @@
 <script src="modemo.js"></script>
 <script>
 document.getElementById("back-link").addEventListener('click',function(event){
-  history.go(-1);
+
+var isMSIE = /*@cc_on!@*/0;
+
+if (isMSIE) {
+  if(history.length>0){
+    event.preventDefault();
+    history.go(-1);
+  }
+} else {
+  if(history.length>1){
+    event.preventDefault();
+    history.go(-1);
+  }
+}
+
 },false);
 (function(d){
   eventcount = 0;

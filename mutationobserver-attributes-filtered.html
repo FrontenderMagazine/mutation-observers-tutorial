@@ -32,8 +32,19 @@
 
 <script>
 document.getElementById("back-link").addEventListener('click',function(event){
-  event.preventDefault();
-  history.go(-1);
+var isMSIE = /*@cc_on!@*/0;
+
+if (isMSIE) {
+  if(history.length>0){
+    event.preventDefault();
+    history.go(-1);
+  }
+} else {
+  if(history.length>1){
+    event.preventDefault();
+    history.go(-1);
+  }
+}
 },false);
 (function(d){
   var btn = d.querySelector('button'),
