@@ -64,7 +64,7 @@
         // Если таковой существует, то клонируем существующий элемент.
         p = (p === undefined) ? document.createElement('p') : p.cloneNode(false);
         docFrag.appendChild(p);
-        i%2B%2B;
+        i++;
     }
 
     a.appendChild( docFrag );
