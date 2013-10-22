@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru-RU">
+<head>
+  <meta charset="utf-8" />
+  <title>Наблюдение за изменениями атрибутов</title>
+  <link rel="stylesheet" href="mutationobserver.css">
+</head>
+<body>
+<header>
+  <h1>Наблюдение за изменениями атрибутов</h1>
+  <nav><a href="/mutation-observers-tutorial/">Вернуться к статье</a></nav>
+</header>
+
+<article>
+  <p>В этом примере нажатие на кнопку <b>Изменить класс/данные</b> добавит или уберет в случае его наличия класс modded элемента <code>div</code> и присвоит атрибуту <code>data-config</code> в одно из двух возможных значений.</p>
+
+  <p>Откройте консоль браузера и посмотрите изменения, которые происходят при смене состояний.</p>
+  <p><button type="button">Изменить класс/данные</button></p>
+</article>
+
+<div id="demo" data-config="Demonstration">
+<p>Идейные соображения высшего порядка, а также постоянный количественный рост и сфера нашей активности способствует подготовки и реализации модели развития.</p>
+<p>Разнообразный и богатый опыт консультация с широким активом играет важную роль в формировании системы обучения кадров, соответствует насущным потребностям.</p>
+<p>Идейные соображения высшего порядка, а также постоянное информационно-пропагандистское обеспечение нашей деятельности в значительной степени обуславливает создание позиций, занимаемых участниками в отношении поставленных задач.</p>
+<p>Не следует, однако забывать, что дальнейшее развитие различных форм деятельности способствует подготовки и реализации направлений прогрессивного развития.</p>
+<p>Равным образом сложившаяся структура организации представляет собой интересный эксперимент проверки форм развития.</p>
+</div>
+
+<script>
+(function(d){
+  var btn = d.querySelector('button'),
+  clickhandler = function(){
+    var demo = d.getElementById('demo'),
+      olddata = 'Demonstration',
+      newdata =  "Observing multiple attribute changes.";
+
+    demo.classList.toggle('modded');
+
+    ( demo.dataset.config == olddata ) ? demo.dataset.config = newdata : demo.dataset.config = olddata;
+  }
+  btn.addEventListener('click',clickhandler,false);
+
+  var mocallback = function(mutationrecords){
+    mutationrecords.map( function(mr){
+      console.log( mr );
+    });
+  }
+  mo = new MutationObserver(mocallback),
+  mo.observe( d.getElementById('demo'),{'attributes':true,'attributeOldValue':true});
+})(document);
+</script>
+
+</body>
+</html>

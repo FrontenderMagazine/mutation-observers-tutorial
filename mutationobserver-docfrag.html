@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru-RU">
+<head>
+  <meta charset="utf-8" />
+  <title>Наблюдение за фрагментом документа</title>
+  <link rel="stylesheet" href="mutationobserver.css">
+</head>
+<body>
+<header>
+  <h1>Наблюдение за добавлением узлов в фрагмент документа.</h1>
+  <nav><a href="/mutation-observers-tutorial/">Вернуться к статье</a></nav>
+</header>
+
+<article>
+  <p>В этом примере мы будем наблюдать за изменениями во фрагменте документа. Использование фрагмента документа это способ собрать множество добавляемых в DOM элементов в одно обновление. Нажатие на кнопку <b>Добавить параграфы</b> добавит элементы в фрагмент документа. Нажатие на <b>Добавить в <code>body</code></b> Добавит фрагмент в элемента <code>body</code> документа.</p>
+
+  <p>Возникло <b class="numevents">0</b> изменение(й).</p>
+
+  <p>
+   <button type="button">Добавить параграфы</button>
+   <button type="button">Добавить в <code>body</code></button>
+  </p>
+</article>
+
+<div id="demo"></div>
+
+<script>
+(function(d){
+  var thismany = 1000,
+  btn = d.querySelectorAll('button'),
+  demo = d.getElementById('demo'),
+  docfrag = d.createDocumentFragment()
+  clickhandler = function(){
+    var i = 0,
+    n = thismany,
+    p,
+    sentence = 'Идейные соображения высшего порядка, а также постоянный количественный рост и сфера нашей активности способствует подготовки и реализации модели развития.';
+
+    while( i < n ){
+      p = (p !== undefined) ? p = p.cloneNode(true) : p = d.createElement('p');
+      if(!p.textContent){ p.textContent = sentence; }
+      docfrag.appendChild(p);
+      i++;
+    }
+
+  }
+  btn[0].addEventListener('click',clickhandler,false);
+  btn[1].addEventListener('click',function(){
+    demo.appendChild(docfrag);
+  },false);
+
+  var mocallback = function(mr){
+    d.querySelector('.numevents').textContent = mr.length;
+    mo.takeRecords();
+  },
+  mo = new MutationObserver(mocallback);
+  mo.observe(docfrag,{'childList':true,'subtree':true});
+})(document);
+</script>
+
+</body>
+</html>

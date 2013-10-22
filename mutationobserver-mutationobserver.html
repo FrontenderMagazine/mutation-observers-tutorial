@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru-RU">
+<head>
+  <meta charset="utf-8" />
+  <title>Почему наблюдатель за изменениями DOM лучше событий изменения DOM</title>
+  <link rel="stylesheet" href="mutationobserver.css">
+</head>
+<body>
+<header>
+  <h1>Почему наблюдатель за изменениями DOM лучше событий изменения DOM</h1>
+  <nav><a href="/mutation-observers-tutorial/">Вернуться к статье</a></nav>
+</header>
+
+<article>
+  <p>В этом примере мы создаем 2500 параграфов и добавляем их во фрагмент документа. Затем мы добавляем этот фрагмент в элемент <code>div</code>. Вместо того, что бы отлавливать <a href="mutationobserver-mutationevent.html">события изменения</a> мы используем наблюдатель за изменениями DOM.</p>
+  <p>Коллбек-функция наблюдателя была вызвана <b class="numevents">0</b> раз(а).</p>
+
+  <p><button>Запустить демо</button></p>
+</article>
+
+<div id="demo"></div>
+
+<script src="modemo.js"></script>
+<script>
+(function(d){
+  eventcount = 0;
+  var mocallback = function(mr){
+    eventcount++;
+    d.querySelector('.numevents').textContent = eventcount;
+  },
+  mo = new MutationObserver(mocallback),
+  demo = d.querySelector('#demo');
+  mo.observe(demo,{'childList':true});
+})(document);
+</script>
+
+</body>
+</html>
